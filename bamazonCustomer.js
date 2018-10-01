@@ -67,6 +67,8 @@ function placeOrder() {
                     } else {
                         console.log(`There is an insufficient stock quantity to fill your order`);
                     }
+
+                    connection.end();
                 }
             );
         });
