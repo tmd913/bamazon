@@ -1,5 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const { table } = require('table');
 
 const connection = mysql.createConnection({
     host: "localhost",
@@ -58,13 +59,24 @@ function viewProducts() {
     connection.query(
         `SELECT * FROM products`,
         function (err, res) {
-            console.log("--------------------");
-            console.log("Products");
-            console.log("--------------------");
-            console.log(res);
+            let data = [
+                ["Item ID", "Product Name", "Department Name", "Price ($)", "Stock Quantity", "Product Sales ($)"]
+            ];
+            res.forEach(element => {
+                let row = [
+                    element.item_id,
+                    element.product_name,
+                    element.department_name,
+                    element.price,
+                    element.stock_quantity,
+                    element.product_sales
+                ];
+                data.push(row);
+            });
+            createTable(data);
+            connection.end();
         }
     );
-    connection.end();
 }
 
 function viewLowInventory() {
@@ -75,13 +87,24 @@ function viewLowInventory() {
         WHERE stock_quantity < 5 
         `,
         function (err, res) {
-            console.log("--------------------");
-            console.log("Low Inventory Products");
-            console.log("--------------------");
-            console.log(res);
+            let data = [
+                ["Item ID", "Product Name", "Department Name", "Price ($)", "Stock Quantity", "Product Sales ($)"]
+            ];
+            res.forEach(element => {
+                let row = [
+                    element.item_id,
+                    element.product_name,
+                    element.department_name,
+                    element.price,
+                    element.stock_quantity,
+                    element.product_sales
+                ];
+                data.push(row);
+            });
+            createTable(data);
+            connection.end();
         }
     );
-    connection.end();
 }
 
 function addToInventory() {
@@ -114,6 +137,19 @@ function addToInventory() {
 }
 
 function addNewProduct() {
+    let departments = [];
+    connection.query(
+        `
+        SELECT DISTINCT department_name 
+        FROM departments
+        ORDER BY department_name
+        `,
+        function (err, res) {
+            res.forEach(element => {
+                departments.push(element.department_name);
+            });
+        }
+    );
     inquirer
         .prompt([
             {
@@ -124,19 +160,7 @@ function addNewProduct() {
             {
                 name: "department",
                 type: "list",
-                choices: [
-                    "Beauty & Health",
-                    "Books & Audible",
-                    "Clothing, Shoes & Jewelry",
-                    "Electronics, Computers & Office",
-                    "Home, Garden & Tools",
-                    "Movies, Music & Games",
-                    "Pet Supplies",
-                    "Restaurants, Food & Grocery",
-                    "Sports & Outdoors",
-                    "Toys, Kids & Baby",
-                    "Other"
-                ],
+                choices: departments,
                 message: "What is the department name in which the product belongs?"
             },
             {
@@ -151,35 +175,26 @@ function addNewProduct() {
             }
         ])
         .then(function (answer) {
-            // connection.query(
-            //     `
-            //     INSERT INTO products (product_name, department_name, price, stock_quantity)
-            //     VALUES (${answer.name}, ${answer.department}, ${answer.price}, ${answer.stock})
-            //     `,
-            //     function (err, res) {
-            //         console.log("New product added...");
-            //         console.log(res);
-            //         console.log(answer);
-            //     }
-            // );
-
             connection.query(
                 `
                 INSERT INTO products (product_name, department_name, price, stock_quantity)
                 VALUES (?, ?, ?, ?)
                 `,
                 [
-                    answer.name, 
-                    answer.department, 
+                    answer.name,
+                    answer.department,
                     answer.price,
                     answer.stock
                 ],
                 function (err, res) {
                     console.log("New product added...");
-                    console.log(res);
-                    console.log(answer);
                     connection.end();
                 }
             );
         });
+}
+
+function createTable(data) {
+    let output = table(data);
+    console.log(output);
 }

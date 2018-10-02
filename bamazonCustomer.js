@@ -1,5 +1,6 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
+const {table} = require('table');
 
 const connection = mysql.createConnection({
     host: "localhost",
@@ -15,10 +16,22 @@ connection.connect(function (err) {
     connection.query(
         `SELECT * FROM products`,
         function (err, res) {
-            console.log("--------------------");
-            console.log("Products");
-            console.log("--------------------");
-            console.log(res);
+            let data = [
+                ["Item ID", "Product Name", "Department Name", "Price ($)", "Stock Quantity", "Product Sales ($)"]
+            ];
+            res.forEach(element => {
+                let row = [
+                    element.item_id,
+                    element.product_name,
+                    element.department_name,
+                    element.price,
+                    element.stock_quantity,
+                    element.product_sales
+                ];
+                data.push(row);
+            });
+            createTable(data);
+
             placeOrder();
         }
     );
@@ -46,30 +59,31 @@ function placeOrder() {
                 WHERE item_id = ${answer.id}
                 `,
                 function (err, res) {
-                    console.log("--------------------");
-                    console.log("Purchased product");
-                    console.log("--------------------");
-                    console.log(res);
-
                     if (res[0].stock_quantity >= answer.units) {
-                        console.log("--------------------");
-                        console.log("Total cost of purchase");
-                        console.log("--------------------");
-                        console.log(`$${res[0].price * answer.units}`);
+                        console.log(`Total cost of purchase: $${res[0].price * answer.units}`);
                         connection.query(
                             `
                             UPDATE products
-                            SET stock_quantity = ${res[0].stock_quantity - answer.units}
+                            SET 
+                                stock_quantity = ${res[0].stock_quantity - answer.units},
+                                product_sales = ${res[0].price * answer.units}
                             WHERE item_id = ${answer.id}
                             `,
-                            function (err, res) {}
+                            function (err, res) {
+                                console.log("Order filled...")
+                            }
                         );
                     } else {
-                        console.log(`There is an insufficient stock quantity to fill your order`);
+                        console.log("There is an insufficient stock quantity to fill your order");
                     }
 
                     connection.end();
                 }
             );
         });
+}
+
+function createTable(data) {
+    let output = table(data);
+    console.log(output);
 }
